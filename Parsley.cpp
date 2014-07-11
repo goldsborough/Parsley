@@ -57,30 +57,19 @@ std::string condense(str_cItr begin, str_cItr end)
     return s;
 }
 
-std::string join(vec_cItr begin, vec_cItr end)
+std::string join(vec_cItr begin, vec_cItr end, const std::string& str)
 {
     std::string s;
     
     while (begin != end)
-        s += *begin++;
+    { s += *begin++ + str; }
     
     return s;
 }
 
-void deleteXMLTree(XMLNode * node)
+void TextParsley::close()
 {
-    while (node->hasChildren())
-        deleteXMLTree(node->lastChild);
-    
-    if (node->parent != 0)
-        node->parent->removeChild(node);
-    
-    else delete node;
-}
-
-void TextParsley::save()
-{
-    if(_saved) return;
+    if(_closed) return;
     
     std::ofstream f(_fname);
     
@@ -104,7 +93,7 @@ void TextParsley::save()
     
     _file.clear();
     
-    _saved = true;
+    _closed = true;
 }
 
 void TextParsley::eraseWord()
@@ -167,33 +156,30 @@ void TextParsley::appendToLine(const std::string& str)
     moveWord(1);
 }
 
-void TextParsley::newFile(const std::string &fname)
-{
-    _fname = fname;
-    _currLine = _file.begin();
-}
-
-void TextParsley::openFile(const std::string& fname)
+void TextParsley::open(const std::string& fname)
 {
     std::fstream file(fname, std::ios::in | std::ios::out);
     
-    if (! file.is_open() || ! file.good())
+    if (! file.good())
         throw FileOpenError();
-    
-    std::string s;
     
     _fname = fname;
     
-    // grab all lines and process them
-    while (getline(file, s))
-        _file.push_back(split(s.begin(), s.end()));
-    
     _currLine = _file.begin();
     
-    _currWord = _currLine->begin();
+    if (file.is_open())
+    {
+        std::string s;
+        
+        // grab all lines and process them
+        while (getline(file, s))
+            _file.push_back(split(s.begin(), s.end()));
+            
+        _currWord = _currLine->begin();
+    }
 }
 
-std::vector<std::string> TextParsley::readAllItems()
+std::vector<std::string> TextParsley::getAllWords()
 {
     wordVec vec;
     
@@ -222,7 +208,7 @@ std::vector<std::string> TextParsley::readAllItems()
     return vec;
 }
 
-std::vector<std::string> TextParsley::readAllLines()
+std::vector<std::string> TextParsley::getAllLines()
 {
     wordVec vec;
     
@@ -271,6 +257,7 @@ XMLNode * XMLParsley::parse(const std::string& fname)
     StrVec vec;
     std::string s,str;
     
+    // grab first line to see if it has a header
     getline(file, s,'>');
     
     // go back in file
@@ -279,24 +266,28 @@ XMLNode * XMLParsley::parse(const std::string& fname)
     // get a char
     s += file.get();
     
+    // see if it is an XML header
     _hasHeader = isHeader(s.begin() + 1, s.end() - 1);
     
-    _root = new XMLNode;
-    
-    if (_hasHeader)
-    {
-        _root = _makeNode(s.begin(), s.end(),true);
-        
-        _root->isClosed = true;
-    }
-    
-    else str += s;
+    if (!_hasHeader) str += s;
     
     while (getline(file,s)) str += s;
     
     vec = _parse(str.begin(), str.end());
     
-    _makeNodeTree(vec.begin(), vec.end(),_root);
+    // _makeNodeTree needs a parent to be passed
+    // for the recursion to work, so pass this
+    // "pseudo-parent"
+    XMLNode* pseudo = new XMLNode;
+    
+    _makeNodeTree(vec.begin(), vec.end(),pseudo);
+    
+    // the root is then the first child of this pseudo-parent
+    _root = pseudo->firstChild;
+    
+    // remove pseudo-parent
+    pseudo->firstChild = pseudo->lastChild = 0;
+    delete pseudo;
     
     return _root;
 }
@@ -305,7 +296,7 @@ bool XMLParsley::isHeader(str_cItr begin, str_cItr end)
 {
     std::string s = condense(begin, end);
     
-    return *(s.begin()) == '?' && *(s.end() - 1) == '?';
+    return *(s.begin()) == '?' && *(s.end() - 1) == '?' && s.substr(1,3) == "xml";
 }
 
 template <class T>
@@ -314,24 +305,30 @@ T XMLParsley::lastNonSpace(T begin, T end)
     return (condense(begin, end)).end();
 }
 
-bool XMLNode::getAttr(std::string& str, const std::string& attrKey)
+std::string XMLNode::getAttr(const std::string& attrKey)
 {
     if (! findAttr(attrKey))
-        return false;
+    { throw ParseError("Could not find attribute key: " + attrKey); }
     
-    str = attrs[attrKey];
-    
-    return true;
+    return attrs[attrKey];
 }
 
-bool XMLNode::removeAttr(const std::string &key)
+void XMLNode::removeAttr(const std::string &key)
 {
     if (! findAttr(key))
-        return false;
+    { throw ParseError("Could not find attribute key: " + key); }
     
     attrs.erase(key);
+}
+
+XMLNode* XMLNode::getNthChild(unsigned int n) const
+{
+    XMLNode* node = firstChild;
     
-    return true;
+    while(--n && node)
+    { node = firstChild->nextSibling; }
+    
+    return node;
 }
 
 XMLNode::NodeVec XMLNode::getElementsByTagName(const std::string& tagName)
@@ -342,15 +339,20 @@ XMLNode::NodeVec XMLNode::getElementsByTagName(const std::string& tagName)
     
     while (itr != 0)
     {
-        if (itr->tag != tagName)
-            continue;
-        
-        vec.push_back(itr);
+        if (itr->tag == tagName)
+        { vec.push_back(itr); }
         
         itr = itr->nextSibling;
     }
     
     return vec;
+}
+
+void XMLNode::insertData(const std::string::size_type ind, const std::string& newData)
+{
+    if (ind < data.size()) data.insert(ind, newData);
+    
+    else throw ParseError("Index out ouf bounds!");
 }
 
 XMLNode::NodeVec XMLNode::getElementsByAttrName(const std::string& attrName)
@@ -361,10 +363,8 @@ XMLNode::NodeVec XMLNode::getElementsByAttrName(const std::string& attrName)
     
     while (itr != 0)
     {
-        if (! findAttr(attrName))
-            continue;
-        
-        vec.push_back(itr);
+        if (itr->findAttr(attrName))
+        { vec.push_back(itr); }
         
         itr = itr->nextSibling;
     }
@@ -610,13 +610,15 @@ XMLParsley::StrVec_cItr XMLParsley::_makeNodeTree(StrVec_cItr itr, StrVec_cItr e
     
     else
     {
-        XMLNode * node;
+        XMLNode* node;
         
         node = _makeNode(itr->begin(), itr->end());
         
-        bool isClosing = node->tag.end() - node->tag.begin() > 2 &&
-        *(node->tag.begin()) == '/';
+        // check if the node is a closing tag
+        bool isClosing = (node->tag.end() - node->tag.begin() > 2 &&
+        *(node->tag.begin()) == '/');
         
+        // if this is a closing tag, close the parent
         if (node->selfClosed)
             parent->selfClosed = true;
         
@@ -628,12 +630,12 @@ XMLParsley::StrVec_cItr XMLParsley::_makeNodeTree(StrVec_cItr itr, StrVec_cItr e
             if (isClosingOfPar)
             {
                 if (parent->isClosed)
-                    throw ParseError("Found duplicate closing tag for opening tag");
+                    throw ParseError("Found duplicate closing tag for opening tag: " + parent->tag);
                 
                 parent->isClosed = true;
                 
             } else
-                throw ParseError("Found closing tag that does not close current node!");
+                throw ParseError("Found closing tag: " + node->tag + "that does not close current node!");
         }
         
         else
@@ -722,18 +724,25 @@ std::string XMLParsley::_treeToString(const XMLNode * root, std::string& str, st
     return str;
 }
 
-void XMLParsley::save(XMLNode * root)
+void XMLParsley::close()
 {
+    static std::string header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
     std::string treeStr;
     
-    if (_hasHeader)
-    { treeStr = _nodeToString(root,"",true); }
+    if (_hasHeader || _wantsHeader)
+    { treeStr = header; }
     
-    _treeToString(root,treeStr);
+    _treeToString(_root,treeStr);
     
     std::ofstream outFile(_fname);
     
-    outFile.write(treeStr.c_str(), treeStr.size());
+    outFile << treeStr;
     
-    _saved = true;
+    _open = false;
+}
+
+XMLNode::~XMLNode()
+{
+    while(hasChildren())
+    { removeFirstChild(); }
 }
