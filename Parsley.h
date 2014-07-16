@@ -387,6 +387,21 @@ public:
     typedef std::vector<XMLNode*> NodeVec;
     typedef NodeVec::const_iterator NodeVec_cItr;
     
+    XMLNode()
+    { }
+    
+    /*************************************************************************//*!
+    *
+    *   @brief Constructor, takes the tag name of the XML node as parameter.
+    *
+    *   @param tagName The tag name of the XML Node.
+    *
+    ****************************************************************************/
+    
+    XMLNode(const std::string& tagName)
+    : tag(tagName)
+    { }
+    
     ~XMLNode();
     
     /*************************************************************************//*!
@@ -850,40 +865,6 @@ class XMLParsley
     
 public:
     
-    XMLParsley()
-    : _wantsHeader(0), _hasHeader(0), _open(0)
-    { }
-    
-    ~XMLParsley() { if(_open) close(); }
-    
-    /*************************************************************************//*!
-    *
-    *   @brief Opens and parses an existing XML document.
-    *
-    *   @details This does not create a new XML document. Use the other
-    *            constructor, taking an XML root and a filename, for that.
-    *
-    ****************************************************************************/
-    
-    XMLParsley(const std::string& fname)
-    : _wantsHeader(0), _hasHeader(0), _open(0)
-    { parse(fname); }
-    
-    
-    /*************************************************************************//*!
-    *
-    *   @brief Makes the parser manage the root node.
-    *
-    *   @details By making the parser manage the root node, it can be saved
-    *            and turned into a new XML document.
-    *
-    ****************************************************************************/
-    
-    XMLParsley(XMLNode * root, const std::string& fname, bool addHeader = true)
-    : _wantsHeader(0), _hasHeader(0), _open(0)
-    { parse(root,fname,addHeader); }
-    
-    
     /*************************************************************************//*!
     *
     *   @brief Method to manually open and parse an existing XML document.
@@ -892,33 +873,16 @@ public:
     
     XMLNode * parse(const std::string& fname);
     
-    
-    /*************************************************************************//*!
-    *
-    *   @brief Method to manually let the parser manage an XML root node.
-    *
-    ****************************************************************************/
-    
-    void parse(XMLNode * root, const std::string& fname, bool addHeader = true)
-    { _root = root; _fname = fname; _wantsHeader = addHeader; }
-    
-    
-    /*************************************************************************//*!
-    *
-    *   @brief Returns the parser's currently managed root XMLNode.
-    *
-    ****************************************************************************/
-    
-    XMLNode * getRoot() { return _root; }
-    
-    
     /*************************************************************************//*!
     *
     *   @brief Closes and saves the XML file.
     *
     ****************************************************************************/
     
-    void close();
+    void save(XMLNode* node,
+              const std::string& fname,
+              bool deleteTree = true,
+              bool addHeader = true);
     
 private:
     
@@ -932,26 +896,21 @@ private:
     
     std::vector<std::string> _parse(str_cItr begin, str_cItr end);
     
-    bool isSelfClosing(str_cItr begin, str_cItr end) const;
+    bool _isSelfClosing(str_cItr begin, str_cItr end) const;
     
-    XMLNode::AttrMap getAttrs(str_cItr begin, str_cItr end) const;
+    bool _isTag(str_cItr begin, str_cItr end) const;
+    
+    bool _isComment(str_cItr begin, str_cItr end) const;
+    
+    bool _isHeader(str_cItr begin, str_cItr end);
+    
+    XMLNode::AttrMap _getAttrs(str_cItr begin, str_cItr end) const;
     
     template <class T>
-    T lastNonSpace(T begin, T end);
-    
-    bool isHeader(str_cItr begin, str_cItr end);
+    T _lastNonSpace(T begin, T end);
     
     std::string _nodeToString(const XMLNode * node, std::string indent = "", bool docHead = false) const;
-    std::string _treeToString(const XMLNode * root, std::string& str, std::string indent = "") const;
-    
-    std::string _fname;
-    
-    bool _open;
-    bool _hasHeader;
-    bool _wantsHeader;
-    
-    XMLNode * _root;
-    
+    std::string _treeToString(const XMLNode * root, std::string& str, std::string indent = "") const;    
 };
 
 #endif /* defined(__Parsley__) */

@@ -245,14 +245,8 @@ XMLNode * XMLParsley::parse(const std::string& fname)
 {
     std::ifstream file(fname);
     
-    _fname = fname;
-    
-    _open = false;
-    
     if (! file.good() || ! file.is_open())
         throw FileOpenError();
-    
-    _open = true;
     
     StrVec vec;
     std::string s,str;
@@ -267,9 +261,9 @@ XMLNode * XMLParsley::parse(const std::string& fname)
     s += file.get();
     
     // see if it is an XML header
-    _hasHeader = isHeader(s.begin() + 1, s.end() - 1);
+    bool hasHeader = _isHeader(s.begin() + 1, s.end() - 1);
     
-    if (!_hasHeader) str += s;
+    if (!hasHeader) str += s;
     
     while (getline(file,s)) str += s;
     
@@ -283,16 +277,16 @@ XMLNode * XMLParsley::parse(const std::string& fname)
     _makeNodeTree(vec.begin(), vec.end(),pseudo);
     
     // the root is then the first child of this pseudo-parent
-    _root = pseudo->firstChild;
+    XMLNode* ret = pseudo->firstChild;
     
     // remove pseudo-parent
     pseudo->firstChild = pseudo->lastChild = 0;
     delete pseudo;
     
-    return _root;
+    return ret;
 }
 
-bool XMLParsley::isHeader(str_cItr begin, str_cItr end)
+bool XMLParsley::_isHeader(str_cItr begin, str_cItr end)
 {
     std::string s = condense(begin, end);
     
@@ -300,7 +294,7 @@ bool XMLParsley::isHeader(str_cItr begin, str_cItr end)
 }
 
 template <class T>
-T XMLParsley::lastNonSpace(T begin, T end)
+T XMLParsley::_lastNonSpace(T begin, T end)
 {
     return (condense(begin, end)).end();
 }
@@ -325,7 +319,7 @@ XMLNode* XMLNode::getNthChild(unsigned int n) const
 {
     XMLNode* node = firstChild;
     
-    while(--n && node)
+    while(n-- && node)
     { node = firstChild->nextSibling; }
     
     return node;
@@ -518,7 +512,7 @@ void XMLNode::appendChild(XMLNode *node)
         firstChild = lastChild;
 }
 
-XMLNode::AttrMap XMLParsley::getAttrs(str_cItr begin, str_cItr end) const
+XMLNode::AttrMap XMLParsley::_getAttrs(str_cItr begin, str_cItr end) const
 {
     XMLNode::AttrMap attrs;
     
@@ -560,7 +554,7 @@ XMLNode::AttrMap XMLParsley::getAttrs(str_cItr begin, str_cItr end) const
     return attrs;
 }
 
-bool XMLParsley::isSelfClosing(str_cItr begin, str_cItr end) const
+bool XMLParsley::_isSelfClosing(str_cItr begin, str_cItr end) const
 {
     while (end != begin && isspace(*end--));
     
@@ -591,14 +585,14 @@ XMLNode * XMLParsley::_makeNode(str_cItr begin, str_cItr end, bool docHead)
     
     curr.erase(0,tag.size());
     
-    XMLNode::AttrMap attrs = getAttrs(curr.begin(), curr.end());
+    XMLNode::AttrMap attrs = _getAttrs(curr.begin(), curr.end());
     
     XMLNode * node = new XMLNode;
     
     node->tag = tag;
     node->attrs = attrs;
     
-    node->selfClosed = isSelfClosing(curr.begin(), curr.end());
+    node->selfClosed = _isSelfClosing(curr.begin(), curr.end());
     
     return node;
 }
@@ -724,21 +718,26 @@ std::string XMLParsley::_treeToString(const XMLNode * root, std::string& str, st
     return str;
 }
 
-void XMLParsley::close()
+void XMLParsley::save(XMLNode* node,
+                      const std::string& fname,
+                      bool deleteTree,
+                      bool addHeader)
 {
-    static std::string header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+    static std::string headerStr = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
     std::string treeStr;
     
-    if (_hasHeader || _wantsHeader)
-    { treeStr = header; }
+    if (addHeader)
+    { treeStr = headerStr; }
     
-    _treeToString(_root,treeStr);
+    _treeToString(node,treeStr);
     
-    std::ofstream outFile(_fname);
+    std::ofstream outFile(fname);
     
     outFile << treeStr;
     
-    _open = false;
+    outFile.close();
+    
+    if (deleteTree) delete node;
 }
 
 XMLNode::~XMLNode()
