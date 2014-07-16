@@ -6,7 +6,7 @@ Document Object Model (DOM) and the other is a plain text navigation program tha
 you to easily move around a text file. 
 
 Full documentation for all methods and classes is available via the Doxyfile.
-To use it, download Doxygen and simply call `doxygen Doxyfile from a command
+To use it, download Doxygen and simply call `doxygen Doxyfile` from a command
 line.
 
 ## Example usage: XMLParsley
