@@ -2,10 +2,10 @@
 
 C++ XML and Plain text parser
 
-Parsley is a light-weight, efficient and simple to use parsing library. It includes two 
-sets of classes, one is a traditional XML Parser that loosely follows the Document Object 
-Model (DOM) and the other is a plain text navigation program that enables you to
-easily move around a text file. 
+Parsley is a light-weight, efficient and simple-to-use C++ XML and plain-text parsing library.
+It includes two sets of classes, one is a traditional XML Parser that loosely follows the
+Document Object Model (DOM) and the other is a plain text navigation program that enables 
+you to easily move around a text file. 
 
 Full documentation for all methods and classes is available via the Doxyfile.
 To use it, download Doxygen and simply call `doxygen Doxyfile from a command
@@ -133,3 +133,5 @@ This creates this new XML file (test.xml):
 
 Of course there are a lot more possibilites to manipulate the XML nodes.
 Have a look at the documentation or the Parsley header file for all options.
+
+Examples for TextParsley to follow.
