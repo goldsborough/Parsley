@@ -3,18 +3,18 @@
 
 int main(int argc, char * argv[])
 {
-  // This XMLNode pointer will be the root for the xml document
-  XMLNode* root;
+  // This ParsleyNode pointer will be the root for the xml document
+  ParsleyNode* root;
     
-  // The XMLParsley class parses the test.xml document. It has
+  // The Parsley class parses the test.xml document. It has
   // two methods, parse() and save() and it stores neither
-  // the filename nor the XMLNode, meaning you must take care
+  // the filename nor the ParsleyNode, meaning you must take care
   // of calling the save() method before exiting your program
   // if you want to save the XML document back to a file.
   // It also means, however, that you can get rid of
   // the parser if you don't need it anymore after parsing
   // a document.
-  XMLParsley parser;
+  Parsley parser;
     
   // Store the file name
   std::string fname("/Users/petergoldsborough/Documents/C++/Exercises/Exercises/test.xml");
@@ -24,7 +24,7 @@ int main(int argc, char * argv[])
   root = parser.parse(fname);
     
   // We now have access to the entire tree.
-  XMLNode* firstChild = root->getFirstChild();
+  ParsleyNode* firstChild = root->getFirstChild();
     
   //Lets change the first child's tag name.
   firstChild->setTag("changedTagName");
@@ -37,9 +37,9 @@ int main(int argc, char * argv[])
   // the north pole.
   firstChild->getElementsByTagName("price")[0]->setData("$4.29");
     
-  // We can create a new XMLNode. Its constructor takes the tag
+  // We can create a new ParsleyNode. Its constructor takes the tag
   // name for the new XML node.
-  XMLNode* child = new XMLNode("dish");
+  ParsleyNode* child = new ParsleyNode("dish");
     
   // We can give it an attribute
   child->addAttr("time", "lunch");
@@ -47,7 +47,7 @@ int main(int argc, char * argv[])
   // Let's also put something between the tags
   child->setData("KFC with ketchup and caviar");
     
-  // Adding a new XMLNode to an existing one is very easy
+  // Adding a new ParsleyNode to an existing one is very easy
   root->appendChild(child);
     
   // Did it work?

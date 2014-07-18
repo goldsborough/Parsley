@@ -10,238 +10,9 @@
 #include "ParsleyErrors.h"
 #include <fstream>
 
-std::string strip(str_cItr begin, str_cItr end)
-{
-    while (begin != end && ::isspace(*begin)) ++begin;
-    
-    while (end != begin && ( ::isspace(*end) || *end == '\0' )) --end;
-    
-    return std::string(begin,++end);
-}
+// FIXME: Re-write comments into file after parsing.
 
-std::vector<std::string> split(str_cItr begin, str_cItr end)
-{
-    std::vector<std::string> vec;
-    
-    str_cItr j = begin;
-    
-    while (j != end)
-    {
-        begin = std::find_if_not(j, end, ::isspace);
-        
-        j = std::find_if(begin,end,::isspace);
-        
-        vec.push_back(std::string(begin,j));
-    }
-    
-    return vec;
-}
-
-std::string splitOne(str_cItr begin, str_cItr end)
-{
-    str_cItr i,j;
-    
-    i = std::find_if_not(begin, end, ::isspace);
-    
-    j = std::find_if(i, end, ::isspace);
-    
-    return std::string(i,j);
-}
-
-std::string condense(str_cItr begin, str_cItr end)
-{
-    std::string s(begin,end);
-    
-    s.erase(std::remove_if(s.begin(), s.end(), ::isspace),s.end());
-    
-    return s;
-}
-
-std::string join(vec_cItr begin, vec_cItr end, const std::string& str)
-{
-    std::string s;
-    
-    while (begin != end)
-    { s += *begin++ + str; }
-    
-    return s;
-}
-
-void TextParsley::close()
-{
-    if(_closed) return;
-    
-    std::ofstream f(_fname);
-    
-    std::string output;
-    
-    for(lineVec::const_iterator line = _file.begin(), lineEnd = _file.end();
-        line != lineEnd;
-        ++line)
-    {
-        for(wordVec::const_iterator word = line->begin(), wordEnd = line->end();
-            word != wordEnd;
-            ++word)
-        {
-            output += *word + " ";
-        }
-        
-        output += "\n";
-    }
-    
-    f << output;
-    
-    _file.clear();
-    
-    _closed = true;
-}
-
-void TextParsley::eraseWord()
-{
-    _currWord = _currLine->erase(_currWord);
-    
-    if (_currWord == _currLine->end()) moveWord(-1);
-}
-
-void TextParsley::eraseLine()
-{
-    _currLine = _file.erase(_currLine);
-    
-    if (_currLine == _file.end()) moveLine(-1);
-}
-
-void TextParsley::replaceLine(const std::string &str)
-{
-    eraseLine();
-    
-    insertInFile(str);
-}
-
-void TextParsley::replaceWord(const std::string& str)
-{
-    eraseWord();
-    
-    insertInLine(str);
-}
-
-void TextParsley::insertInLine(const std::string& str)
-{
-    wordVec vec = split(str.begin(), str.end());
-    
-    // insert all words (last word first)
-    for (std::vector<std::string>::const_reverse_iterator itr = vec.rbegin(), end = vec.rend();
-         itr != end;
-         ++itr)
-    {
-        _currWord = _currLine->insert(_currWord, *itr);
-    }
-}
-
-void TextParsley::appendToLine(const std::string& str)
-{
-    // split line into words
-    wordVec vec = split(str.begin(), str.end());
-    
-    toLineEnd();
-    
-    // append all to line
-    for (wordItr itr = vec.begin(), end = vec.end();
-         itr != end;
-         ++itr)
-    {
-        _currLine->push_back(*itr);
-    }
-    
-    // first new word
-    moveWord(1);
-}
-
-void TextParsley::open(const std::string& fname)
-{
-    std::fstream file(fname, std::ios::in | std::ios::out);
-    
-    if (! file.good())
-        throw FileOpenError();
-    
-    _fname = fname;
-    
-    _currLine = _file.begin();
-    
-    if (file.is_open())
-    {
-        std::string s;
-        
-        // grab all lines and process them
-        while (getline(file, s))
-            _file.push_back(split(s.begin(), s.end()));
-            
-        _currWord = _currLine->begin();
-    }
-}
-
-std::vector<std::string> TextParsley::getAllWords()
-{
-    wordVec vec;
-    
-    for (lineItr line = _file.begin(), fileEnd = _file.end();
-         line != fileEnd;
-         ++line)
-    {
-        if (! line->empty())
-        {
-            // check for comment-only lines by grabbing the first word
-            std::string w = *(line->begin());
-            
-            // check if line is a comment, else make into string and store in vector
-            if (! w.empty() && condense(w.begin(), w.end())[0] != '#')
-            {
-                for (wordItr word = line->begin(), lineEnd = line->end();
-                     word != lineEnd;
-                     ++word)
-                {
-                    vec.push_back(*word);
-                }
-            }
-        }
-    }
-    
-    return vec;
-}
-
-std::vector<std::string> TextParsley::getAllLines()
-{
-    wordVec vec;
-    
-    for (lineItr line = _file.begin(), fileEnd = _file.end();
-         line != fileEnd;
-         ++line)
-    {
-        if (! line->empty())
-        {
-            // check for comment-only lines by grabbing the first word
-            std::string w = *(line->begin());
-            
-            // check if line is a comment, else make into string and store in vector
-            if (! w.empty() && condense(w.begin(), w.end())[0] != '#')
-            {
-                std::string lineStr;
-                
-                for (wordItr word = line->begin(), end = line->end();
-                     word != end;
-                     ++word)
-                {
-                    lineStr += (*word);
-                }
-                
-                vec.push_back(lineStr);
-            }
-        }
-    }
-    
-    return vec;
-}
-
-XMLNode * XMLParsley::parse(const std::string& fname)
+ParsleyNode * Parsley::parse(const std::string& fname)
 {
     std::ifstream file(fname);
     
@@ -272,12 +43,12 @@ XMLNode * XMLParsley::parse(const std::string& fname)
     // _makeNodeTree needs a parent to be passed
     // for the recursion to work, so pass this
     // "pseudo-parent"
-    XMLNode* pseudo = new XMLNode;
+    ParsleyNode* pseudo = new ParsleyNode;
     
     _makeNodeTree(vec.begin(), vec.end(),pseudo);
     
     // the root is then the first child of this pseudo-parent
-    XMLNode* ret = pseudo->firstChild;
+    ParsleyNode* ret = pseudo->firstChild;
     
     // remove pseudo-parent
     pseudo->firstChild = pseudo->lastChild = 0;
@@ -286,20 +57,49 @@ XMLNode * XMLParsley::parse(const std::string& fname)
     return ret;
 }
 
-bool XMLParsley::_isHeader(str_cItr begin, str_cItr end)
+std::string Parsley::_strip(Str_cItr begin, Str_cItr end) const
 {
-    std::string s = condense(begin, end);
+    while (begin != end && ::isspace(*begin)) ++begin;
+    
+    while (end != begin && ( ::isspace(*end) || *end == '\0' )) --end;
+    
+    return std::string(begin,++end);
+}
+
+std::string Parsley::_splitOne(Str_cItr begin, Str_cItr end) const
+{
+    Str_cItr i,j;
+    
+    i = std::find_if_not(begin, end, ::isspace);
+    
+    j = std::find_if(i, end, ::isspace);
+    
+    return std::string(i,j);
+}
+
+std::string Parsley::_condense(Str_cItr begin, Str_cItr end) const
+{
+    std::string s(begin,end);
+    
+    s.erase(std::remove_if(s.begin(), s.end(), ::isspace),s.end());
+    
+    return s;
+}
+
+bool Parsley::_isHeader(Str_cItr begin, Str_cItr end)
+{
+    std::string s = _condense(begin, end);
     
     return *(s.begin()) == '?' && *(s.end() - 1) == '?' && s.substr(1,3) == "xml";
 }
 
 template <class T>
-T XMLParsley::_lastNonSpace(T begin, T end)
+T Parsley::_lastNonSpace(T begin, T end)
 {
-    return (condense(begin, end)).end();
+    return (_condense(begin, end)).end();
 }
 
-std::string XMLNode::getAttr(const std::string& attrKey)
+std::string ParsleyNode::getAttr(const std::string& attrKey)
 {
     if (! findAttr(attrKey))
     { throw ParseError("Could not find attribute key: " + attrKey); }
@@ -307,7 +107,7 @@ std::string XMLNode::getAttr(const std::string& attrKey)
     return attrs[attrKey];
 }
 
-void XMLNode::removeAttr(const std::string &key)
+void ParsleyNode::removeAttr(const std::string &key)
 {
     if (! findAttr(key))
     { throw ParseError("Could not find attribute key: " + key); }
@@ -315,9 +115,9 @@ void XMLNode::removeAttr(const std::string &key)
     attrs.erase(key);
 }
 
-XMLNode* XMLNode::getNthChild(unsigned int n) const
+ParsleyNode* ParsleyNode::getNthChild(unsigned int n) const
 {
-    XMLNode* node = firstChild;
+    ParsleyNode* node = firstChild;
     
     while(n-- && node)
     { node = firstChild->nextSibling; }
@@ -325,11 +125,11 @@ XMLNode* XMLNode::getNthChild(unsigned int n) const
     return node;
 }
 
-XMLNode::NodeVec XMLNode::getElementsByTagName(const std::string& tagName)
+ParsleyNode::NodeVec ParsleyNode::getElementsByTagName(const std::string& tagName)
 {
     NodeVec vec;
     
-    XMLNode * itr = firstChild;
+    ParsleyNode * itr = firstChild;
     
     while (itr != 0)
     {
@@ -342,18 +142,18 @@ XMLNode::NodeVec XMLNode::getElementsByTagName(const std::string& tagName)
     return vec;
 }
 
-void XMLNode::insertData(const std::string::size_type ind, const std::string& newData)
+void ParsleyNode::insertData(const std::string::size_type ind, const std::string& newData)
 {
     if (ind < data.size()) data.insert(ind, newData);
     
     else throw ParseError("Index out ouf bounds!");
 }
 
-XMLNode::NodeVec XMLNode::getElementsByAttrName(const std::string& attrName)
+ParsleyNode::NodeVec ParsleyNode::getElementsByAttrName(const std::string& attrName)
 {
     NodeVec vec;
     
-    XMLNode * itr = firstChild;
+    ParsleyNode * itr = firstChild;
     
     while (itr != 0)
     {
@@ -366,7 +166,7 @@ XMLNode::NodeVec XMLNode::getElementsByAttrName(const std::string& attrName)
     return vec;
 }
 
-bool XMLNode::insertChild(XMLNode* childOfThisNode, XMLNode * node)
+bool ParsleyNode::insertChild(ParsleyNode* childOfThisNode, ParsleyNode * node)
 {
     if (childOfThisNode == 0 ||
         childOfThisNode->parent != this)
@@ -387,7 +187,7 @@ bool XMLNode::insertChild(XMLNode* childOfThisNode, XMLNode * node)
     return true;
 }
 
-bool XMLNode::removeChild(XMLNode* childOfThisNode)
+bool ParsleyNode::removeChild(ParsleyNode* childOfThisNode)
 {
     // check if valid node
     if (childOfThisNode == 0 ||
@@ -439,14 +239,14 @@ bool XMLNode::removeChild(XMLNode* childOfThisNode)
     return true;
 }
 
-XMLParsley::StrVec XMLParsley::_parse(str_cItr begin, str_cItr end)
+Parsley::StrVec Parsley::_parse(Str_cItr begin, Str_cItr end)
 {
     StrVec vec;
     
     std::string s;
     
-    str_cItr i = begin;
-    str_cItr j = i;
+    Str_cItr i = begin;
+    Str_cItr j = i;
     
     while (j != end)
     {
@@ -472,7 +272,7 @@ XMLParsley::StrVec XMLParsley::_parse(str_cItr begin, str_cItr end)
     return vec;
 }
 
-void XMLNode::prependChild(XMLNode *node)
+void ParsleyNode::prependChild(ParsleyNode *node)
 {
     if (node == this)
         throw ParseError("Prepending Node to self");
@@ -492,7 +292,7 @@ void XMLNode::prependChild(XMLNode *node)
         lastChild = firstChild;
 }
 
-void XMLNode::appendChild(XMLNode *node)
+void ParsleyNode::appendChild(ParsleyNode *node)
 {
     if (node == this)
         throw ParseError("Appending Node to self");
@@ -512,11 +312,11 @@ void XMLNode::appendChild(XMLNode *node)
         firstChild = lastChild;
 }
 
-XMLNode::AttrMap XMLParsley::_getAttrs(str_cItr begin, str_cItr end) const
+ParsleyNode::AttrMap Parsley::_getAttrs(Str_cItr begin, Str_cItr end) const
 {
-    XMLNode::AttrMap attrs;
+    ParsleyNode::AttrMap attrs;
     
-    str_cItr j;
+    Str_cItr j;
     
     j = begin;
     
@@ -531,7 +331,7 @@ XMLNode::AttrMap XMLParsley::_getAttrs(str_cItr begin, str_cItr end) const
         // from the first non-space char to the '=' is the key
         std::string key(begin,j);
         
-        key = condense(key.begin(), key.end());
+        key = _condense(key.begin(), key.end());
         
         // find the pair of parantheses
         
@@ -543,7 +343,7 @@ XMLNode::AttrMap XMLParsley::_getAttrs(str_cItr begin, str_cItr end) const
         // the value is between the parantheses
         std::string val(begin, j);
         
-        val = condense(val.begin(), val.end());
+        val = _condense(val.begin(), val.end());
         
         // create new entry
         attrs[key] = val;
@@ -554,16 +354,16 @@ XMLNode::AttrMap XMLParsley::_getAttrs(str_cItr begin, str_cItr end) const
     return attrs;
 }
 
-bool XMLParsley::_isSelfClosing(str_cItr begin, str_cItr end) const
+bool Parsley::_isSelfClosing(Str_cItr begin, Str_cItr end) const
 {
     while (end != begin && isspace(*end--));
     
     return *end == '/';
 }
 
-XMLNode * XMLParsley::_makeNode(str_cItr begin, str_cItr end, bool docHead)
+ParsleyNode * Parsley::_makeNode(Str_cItr begin, Str_cItr end, bool docHead)
 {
-    str_cItr i,j;
+    Str_cItr i,j;
     
     i = std::find(begin, end, '<');
     
@@ -581,13 +381,13 @@ XMLNode * XMLParsley::_makeNode(str_cItr begin, str_cItr end, bool docHead)
     if (curr.empty())
         throw ParseError("Empty tag found!");
     
-    std::string tag = splitOne(curr.begin(), curr.end());
+    std::string tag = _splitOne(curr.begin(), curr.end());
     
     curr.erase(0,tag.size());
     
-    XMLNode::AttrMap attrs = _getAttrs(curr.begin(), curr.end());
+    ParsleyNode::AttrMap attrs = _getAttrs(curr.begin(), curr.end());
     
-    XMLNode * node = new XMLNode;
+    ParsleyNode * node = new ParsleyNode;
     
     node->tag = tag;
     node->attrs = attrs;
@@ -597,14 +397,14 @@ XMLNode * XMLParsley::_makeNode(str_cItr begin, str_cItr end, bool docHead)
     return node;
 }
 
-XMLParsley::StrVec_cItr XMLParsley::_makeNodeTree(StrVec_cItr itr, StrVec_cItr end, XMLNode * parent)
+Parsley::StrVec_cItr Parsley::_makeNodeTree(StrVec_cItr itr, StrVec_cItr end, ParsleyNode * parent)
 {
     if (std::find(itr->begin(), itr->end(), '<') == itr->end())
-        parent->data += strip(itr->begin(), itr->end());
+        parent->data += _strip(itr->begin(), itr->end());
     
     else
     {
-        XMLNode* node;
+        ParsleyNode* node;
         
         node = _makeNode(itr->begin(), itr->end());
         
@@ -650,7 +450,7 @@ XMLParsley::StrVec_cItr XMLParsley::_makeNodeTree(StrVec_cItr itr, StrVec_cItr e
     return itr;
 }
 
-std::string XMLParsley::_nodeToString(const XMLNode *node, std::string indent, bool docHead) const
+std::string Parsley::_nodeToString(const ParsleyNode *node, std::string indent, bool docHead) const
 {
     std::string str;
     
@@ -662,7 +462,7 @@ std::string XMLParsley::_nodeToString(const XMLNode *node, std::string indent, b
         
         str += node->tag;
         
-        for (XMLNode::AttrMap::const_iterator itr = node->attrs.begin(), end = node->attrs.end();
+        for (ParsleyNode::AttrMap::const_iterator itr = node->attrs.begin(), end = node->attrs.end();
              itr != end;
              ++itr)
         {
@@ -684,7 +484,7 @@ std::string XMLParsley::_nodeToString(const XMLNode *node, std::string indent, b
     return str;
 }
 
-std::string XMLParsley::_treeToString(const XMLNode * root, std::string& str, std::string indent) const
+std::string Parsley::_treeToString(const ParsleyNode * root, std::string& str, std::string indent) const
 {
     if (root != 0)
     {
@@ -718,7 +518,7 @@ std::string XMLParsley::_treeToString(const XMLNode * root, std::string& str, st
     return str;
 }
 
-void XMLParsley::save(XMLNode* node,
+void Parsley::save(ParsleyNode* node,
                       const std::string& fname,
                       bool deleteTree,
                       bool addHeader)
@@ -740,7 +540,7 @@ void XMLParsley::save(XMLNode* node,
     if (deleteTree) delete node;
 }
 
-XMLNode::~XMLNode()
+ParsleyNode::~ParsleyNode()
 {
     while(hasChildren())
     { removeFirstChild(); }
