@@ -12,6 +12,35 @@
 
 // FIXME: Re-write comments into file after parsing.
 
+std::string strip(Str_cItr begin, Str_cItr end)
+{
+    while (begin != end && ::isspace(*begin)) ++begin;
+    
+    while (end != begin && ( ::isspace(*end) || *end == '\0' )) --end;
+    
+    return std::string(begin,++end);
+}
+
+std::string splitOne(Str_cItr begin, Str_cItr end)
+{
+    Str_cItr i,j;
+    
+    i = std::find_if_not(begin, end, ::isspace);
+    
+    j = std::find_if(i, end, ::isspace);
+    
+    return std::string(i,j);
+}
+
+std::string condense(Str_cItr begin, Str_cItr end)
+{
+    std::string s(begin,end);
+    
+    s.erase(std::remove_if(s.begin(), s.end(), ::isspace),s.end());
+    
+    return s;
+}
+
 ParsleyNode * Parsley::parse(const std::string& fname)
 {
     std::ifstream file(fname);
@@ -57,38 +86,9 @@ ParsleyNode * Parsley::parse(const std::string& fname)
     return ret;
 }
 
-std::string Parsley::_strip(Str_cItr begin, Str_cItr end) const
-{
-    while (begin != end && ::isspace(*begin)) ++begin;
-    
-    while (end != begin && ( ::isspace(*end) || *end == '\0' )) --end;
-    
-    return std::string(begin,++end);
-}
-
-std::string Parsley::_splitOne(Str_cItr begin, Str_cItr end) const
-{
-    Str_cItr i,j;
-    
-    i = std::find_if_not(begin, end, ::isspace);
-    
-    j = std::find_if(i, end, ::isspace);
-    
-    return std::string(i,j);
-}
-
-std::string Parsley::_condense(Str_cItr begin, Str_cItr end) const
-{
-    std::string s(begin,end);
-    
-    s.erase(std::remove_if(s.begin(), s.end(), ::isspace),s.end());
-    
-    return s;
-}
-
 bool Parsley::_isHeader(Str_cItr begin, Str_cItr end)
 {
-    std::string s = _condense(begin, end);
+    std::string s = condense(begin, end);
     
     return *(s.begin()) == '?' && *(s.end() - 1) == '?' && s.substr(1,3) == "xml";
 }
@@ -96,7 +96,7 @@ bool Parsley::_isHeader(Str_cItr begin, Str_cItr end)
 template <class T>
 T Parsley::_lastNonSpace(T begin, T end)
 {
-    return (_condense(begin, end)).end();
+    return (condense(begin, end)).end();
 }
 
 std::string ParsleyNode::getAttr(const std::string& attrKey)
@@ -331,7 +331,7 @@ ParsleyNode::AttrMap Parsley::_getAttrs(Str_cItr begin, Str_cItr end) const
         // from the first non-space char to the '=' is the key
         std::string key(begin,j);
         
-        key = _condense(key.begin(), key.end());
+        key = condense(key.begin(), key.end());
         
         // find the pair of parantheses
         
@@ -343,7 +343,7 @@ ParsleyNode::AttrMap Parsley::_getAttrs(Str_cItr begin, Str_cItr end) const
         // the value is between the parantheses
         std::string val(begin, j);
         
-        val = _condense(val.begin(), val.end());
+        val = condense(val.begin(), val.end());
         
         // create new entry
         attrs[key] = val;
@@ -381,7 +381,7 @@ ParsleyNode * Parsley::_makeNode(Str_cItr begin, Str_cItr end, bool docHead)
     if (curr.empty())
         throw ParseError("Empty tag found!");
     
-    std::string tag = _splitOne(curr.begin(), curr.end());
+    std::string tag = splitOne(curr.begin(), curr.end());
     
     curr.erase(0,tag.size());
     
@@ -400,7 +400,7 @@ ParsleyNode * Parsley::_makeNode(Str_cItr begin, Str_cItr end, bool docHead)
 Parsley::StrVec_cItr Parsley::_makeNodeTree(StrVec_cItr itr, StrVec_cItr end, ParsleyNode * parent)
 {
     if (std::find(itr->begin(), itr->end(), '<') == itr->end())
-        parent->data += _strip(itr->begin(), itr->end());
+        parent->data += strip(itr->begin(), itr->end());
     
     else
     {

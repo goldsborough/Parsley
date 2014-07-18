@@ -12,6 +12,8 @@
 #include <vector>
 #include <map>
 
+typedef std::string::const_iterator Str_cItr;
+
 /*************************************************************************//*!
 *
 *   @brief An ParsleyNode is a single node in an XML document.
@@ -530,8 +532,6 @@ public:
     
 private:
     
-    typedef std::string::const_iterator Str_cItr;
-    
     typedef std::vector<std::string> StrVec;
     
     typedef StrVec::const_iterator StrVec_cItr;
@@ -552,17 +552,16 @@ private:
     
     ParsleyNode::AttrMap _getAttrs(Str_cItr begin, Str_cItr end) const;
     
-    std::string _strip(Str_cItr begin, Str_cItr end) const;
-    
-    std::string _splitOne(Str_cItr begin, Str_cItr end) const;
-    
-    std::string _condense(Str_cItr begin, Str_cItr end) const;
-    
     template <class T>
     T _lastNonSpace(T begin, T end);
     
-    std::string _nodeToString(const ParsleyNode * node, std::string indent = "", bool docHead = false) const;
-    std::string _treeToString(const ParsleyNode * root, std::string& str, std::string indent = "") const;    
+    std::string _nodeToString(const ParsleyNode * node,
+                              std::string indent = "",
+                              bool docHead = false) const;
+    
+    std::string _treeToString(const ParsleyNode * root,
+                              std::string& str,
+                              std::string indent = "") const;
 };
 
 #endif /* defined(__Parsley__) */
