@@ -4,7 +4,7 @@
 
 Full documentation for all methods and classes is available via the Doxyfile.
 To use it, download [Doxygen](http://www.stack.nl/~dimitri/doxygen/) and simply call `doxygen Doxyfile` from a command
-line.
+line inside the library's root directory.
 
 ## Example usage
 
